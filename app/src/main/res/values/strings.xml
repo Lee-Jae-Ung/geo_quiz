@@ -3,4 +3,6 @@
     <string name="question_text">호주의 수도는 캔버라이다.</string>
     <string name="true_button">True</string>
     <string name="false_button">False</string>
+    <string name="correct_toast">정답!</string>
+    <string name="incorrect_toast">틀렸음!</string>
 </resources>
