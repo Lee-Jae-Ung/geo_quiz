@@ -7,8 +7,10 @@ import android.widget.Button
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import androidx.lifecycle.ViewModelProvider
 
 private const val TAG = "MainActivity"
+private const val KEY_INDEX = "index"
 
 class MainActivity : AppCompatActivity() {
 
@@ -19,16 +21,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var questionTextView: TextView
 
 
-    private val questionBank = listOf(
-        Question(R.string.question_australia, true),
-        Question(R.string.question_oceans, true),
-        Question(R.string.question_mideast, false),
-        Question(R.string.question_africa, false),
-        Question(R.string.question_americas, true),
-        Question(R.string.question_asia, true)
-    )
+    private val quizViewModel: QuizViewModel by lazy {
+        ViewModelProvider(this).get(QuizViewModel::class.java)
+    }
 
-    private var currentIndex = 0
 
     private var count = 0.0
     private var countCor = 0
@@ -37,6 +33,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "onCreate(Bundle?) called")
         setContentView(R.layout.activity_main)
+
+        val currentIndex = savedInstanceState?.getInt(KEY_INDEX, 0) ?: 0
+        quizViewModel.currentIndex = currentIndex
 
         trueButton = findViewById(R.id.true_button)
         falseButton = findViewById(R.id.false_button)
@@ -47,7 +46,7 @@ class MainActivity : AppCompatActivity() {
         //chap3 챌린지 : 점수 보여주기
         trueButton.setOnClickListener {
             checkAnswer(true)
-            if(countCor == questionBank.size){
+            if(countCor == quizViewModel.currentQuestionSize){
                 Toast.makeText(this,"정답률 : "+countCor*100/count+"%",Toast.LENGTH_SHORT).show()
                 Log.d("예아","countCor ="+countCor+"count ="+count)
             }
@@ -55,33 +54,25 @@ class MainActivity : AppCompatActivity() {
 
         falseButton.setOnClickListener {
             checkAnswer(false)
-            if(countCor == questionBank.size){
+            if(countCor == quizViewModel.currentQuestionSize){
                 Toast.makeText(this,"정답률 : "+countCor*100/count+"%",Toast.LENGTH_SHORT).show()
                 Log.d("예아","countCor ="+countCor+"count ="+count)
             }
         }
 
         nextButton.setOnClickListener {
-            currentIndex = (currentIndex + 1) % questionBank.size
+            quizViewModel.moveToNext()
             updateQuestion()
-
-
-
         }
 
         previousButton.setOnClickListener {
-            if(currentIndex > 0) {
-                currentIndex = (currentIndex - 1) % questionBank.size
-                updateQuestion()
-            } else {
-                currentIndex = questionBank.size - 1
-                updateQuestion()
-            }
+            quizViewModel.moveToPrev()
+            updateQuestion()
         }
 
         //chap2 챌린지1 textview 에 리스터 추가하기
         questionTextView.setOnClickListener {
-            currentIndex = (currentIndex + 1) % questionBank.size
+            quizViewModel.moveToNext()
             updateQuestion()
         }
 
@@ -104,6 +95,12 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, "onPause() called")
     }
 
+    override fun onSaveInstanceState(savedInstanceState: Bundle) {
+        super.onSaveInstanceState(savedInstanceState)
+        Log.d(TAG, "onSaveInstanceState")
+        savedInstanceState.putInt(KEY_INDEX, quizViewModel.currentIndex)
+    }
+
     override fun onStop() {
         super.onStop()
         Log.d(TAG, "onStop() called")
@@ -115,9 +112,9 @@ class MainActivity : AppCompatActivity() {
     }
 //chap3 챌린지: 정답 맞춘 문제를 건너뛰기
     private fun updateQuestion() {
-        val questionTextResId = questionBank[currentIndex].textResId
+        val questionTextResId = quizViewModel.currentQuestionText
         questionTextView.setText(questionTextResId)
-        if (!questionBank[currentIndex].isCor) {
+        if (!quizViewModel.currentQuestionIsCor) {
             trueButton.visibility = Button.VISIBLE
             falseButton.visibility = Button.VISIBLE
 
@@ -130,7 +127,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkAnswer(userAnswer: Boolean) {
-        val correctAnswer = questionBank[currentIndex].answer
+        val correctAnswer = quizViewModel.currentQuestionAnswer
 
         val messageResId = if (userAnswer == correctAnswer) {
             R.string.correct_toast
@@ -140,7 +137,7 @@ class MainActivity : AppCompatActivity() {
 
         if (messageResId == R.string.correct_toast) {
 
-            questionBank[currentIndex].isCor = true
+            quizViewModel.currentQuestionIsCor = true
             trueButton.visibility = Button.INVISIBLE
             falseButton.visibility = Button.INVISIBLE
             count += 1
